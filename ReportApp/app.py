@@ -1,43 +1,49 @@
 import streamlit as st
-from genera_report import genera_report
-from genera_excel import genera_excel
 import os
+from genera_report import genera_report
+from genera_excel import genera_excel  # Assicurati di avere questo file nello stesso repo
+import time
 
-# Imposta cartella base
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+st.set_page_config(page_title="Engine Report", layout="wide")
 
-# Logo in alto a sinistra
-logo_path = os.path.join(BASE_DIR, "logo.jpg")
-try:
+# --- Header logo ---
+logo_path = "logo.jpg"
+if os.path.exists(logo_path):
     st.image(logo_path, width=150)
-except Exception:
-    pass
+st.title("Engine Report")
 
-st.title("Engine Report")  # titolo nell'app, rimane visibile
+st.write("Enter the Engine Serial Number (ESN) below:")
 
-# Input ESN
-esn = st.text_input("Enter Engine Serial Number (ESN):")
-
+# --- Input ESN ---
+esn = st.text_input("ESN", "")
 if esn:
-    st.success(f"ESN entered: {esn}")  # Messaggio di conferma inserimento
+    st.success(f"ESN entered: {esn}")
 
-    # Bottoni per PDF o Excel
+    # --- Barra di avanzamento ---
+    progress_text = "Generating report..."
+    progress_bar = st.progress(0, text=progress_text)
+
+    # Simulazione progressiva
+    for percent_complete in range(0, 101, 10):
+        time.sleep(0.1)  # piccolo delay per simulare lavoro
+        progress_bar.progress(percent_complete, text=progress_text)
+
+    st.write("Choose report format to download:")
+
+    # --- Bottoni PDF / Excel ---
     col1, col2 = st.columns(2)
 
-    with col1:
-        if st.button("Generate PDF"):
-            try:
-                pdf_path = genera_report(esn, BASE_DIR)
-                st.success(f"PDF generated: {pdf_path}")
-                st.download_button("Download PDF", pdf_path)
-            except Exception as e:
-                st.error(f"Error generating PDF: {e}")
+    base_dir = os.getcwd()  # cartella corrente del repo
 
-    with col2:
-        if st.button("Generate Excel"):
+    with col1:
+        if st.button("Download PDF"):
             try:
-                excel_path = genera_excel(esn, BASE_DIR)
-                st.success(f"Excel generated: {excel_path}")
-                st.download_button("Download Excel", excel_path)
-            except Exception as e:
-                st.error(f"Error generating Excel: {e}")
+                pdf_file = genera_report(esn, base_dir)
+                with open(pdf_file, "rb") as f:
+                    st.download_button(
+                        label="Download PDF",
+                        data=f,
+                        file_name=pdf_file,
+                        mime="application/pdf"
+                    )
+            excep
