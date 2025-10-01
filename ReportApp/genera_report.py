@@ -1,10 +1,9 @@
-# genera_report_verticale.py
-
 import pandas as pd
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from io import BytesIO
 
 styles = getSampleStyleSheet()
 normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, leading=9)
@@ -26,7 +25,7 @@ def crea_tabella(df, titolo):
         data.append([Paragraph(str(cell), normal_style) for cell in row])
 
     num_cols = len(df.columns)
-    col_widths = [450 / num_cols] * num_cols  # leggermente più stretto per verticale
+    col_widths = [500 / num_cols] * num_cols
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
@@ -47,9 +46,10 @@ def crea_tabella(df, titolo):
     elements.append(Spacer(1, 12))
     return elements
 
-def genera_report_verticale(esn):
-    pdf_file = f"Report_{esn}_vertical.pdf"
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
+def genera_report(esn):
+    """Genera il PDF e restituisce BytesIO"""
+    pdf_buffer = BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, leftMargin=20, rightMargin=20)
     elements = []
 
     # Logo a sinistra
@@ -106,4 +106,52 @@ def genera_report_verticale(esn):
     elements += crea_tabella(df_claim_risultato, titolo_claim)
 
     doc.build(elements)
-    print(f"✅ Report generato: {pdf_file}")
+    pdf_buffer.seek(0)
+    return pdf_buffer
+
+def genera_excel(esn):
+    """Genera Excel con tutte le tabelle nello stesso foglio"""
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+
+    # --- Dossier ICSS ---
+    df_icss = pd.read_excel("Data Base Service.xlsx")
+    df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)].copy()
+    if not df_icss_filtrato.empty:
+        df_icss_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_icss_filtrato['WAT_ORIGINAL'], errors='coerce')
+        df_icss_filtrato = df_icss_filtrato.sort_values("WAT_ORIGINAL", ascending=False)
+        df_icss_risultato = df_icss_filtrato[["DOSSIER ID","WAT_ORIGINAL","DEALER","Engine Serial Number","Pre-diagnosis","Repair Description"]]
+    else:
+        df_icss_risultato = pd.DataFrame()
+
+    # --- THD ---
+    df_thd = pd.read_excel("THD FM.xlsx")
+    df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)].copy()
+    if not df_thd_filtrato.empty:
+        df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
+        df_thd_filtrato = df_thd_filtrato.sort_values("Submitted On", ascending=False)
+        df_thd_risultato = df_thd_filtrato[["Request/Report Number","Submitted On","Request/Report Subtype","Dealer","Question","Symptom","Solution","Status Reason","Product Type"]]
+    else:
+        df_thd_risultato = pd.DataFrame()
+
+    # --- Claim ---
+    df_claim = pd.read_excel("Data Base Warranty.xlsx")
+    df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)].copy()
+    if not df_claim_filtrato.empty:
+        df_claim_filtrato['Claim Payment Date'] = pd.to_datetime(df_claim_filtrato['Claim Payment Date'], errors='coerce')
+        df_claim_filtrato = df_claim_filtrato.sort_values("Claim Payment Date", ascending=False)
+        df_claim_risultato = df_claim_filtrato[["FPT Engine Family","Claim Number","Payed Dealer Name","Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"]]
+    else:
+        df_claim_risultato = pd.DataFrame()
+
+    # Scrivi tutto nello stesso foglio
+    startrow = 0
+    sheet_name = "Report"
+    for df, title in [(df_icss_risultato, "Dossier ICSS"), (df_thd_risultato, "THD"), (df_claim_risultato, "Claim")]:
+        if not df.empty:
+            df.to_excel(writer, sheet_name=sheet_name, startrow=startrow, index=False)
+        startrow += (len(df) + 2) if not df.empty else 2
+
+    writer.save()
+    output.seek(0)
+    return output
