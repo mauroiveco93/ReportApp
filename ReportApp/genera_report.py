@@ -1,85 +1,67 @@
-import os
 import pandas as pd
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import landscape, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from io import BytesIO
 
-# --- Stili ---
 styles = getSampleStyleSheet()
 normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, leading=9)
 titolo_style = ParagraphStyle('titolo', parent=styles['Heading2'], spaceAfter=10, alignment=0)
 
-# --- Percorsi file ---
-BASE_DIR = os.getcwd()  # cartella corrente
-ICSS_FILE = os.path.join(BASE_DIR, "Data Base Service.xlsx")
-THD_FILE = os.path.join(BASE_DIR, "THD FM.xlsx")
-CLAIM_FILE = os.path.join(BASE_DIR, "Data Base Warranty.xlsx")
-LOGO_FILE = os.path.join(BASE_DIR, "logo.jpg")
-
-# --- Funzione creazione tabella ---
 def crea_tabella(df, titolo):
     elements = []
+    elements.append(Paragraph(titolo, titolo_style))
+    elements.append(Spacer(1,6))
+    
     if df.empty:
-        elements.append(Paragraph(titolo, titolo_style))
-        elements.append(Spacer(1, 6))
         elements.append(Paragraph("No values found", styles['Normal']))
-        elements.append(Spacer(1, 12))
+        elements.append(Spacer(1,12))
         return elements
-
+    
     df = df.fillna("").astype(str)
     data = [[Paragraph(str(col), normal_style) for col in df.columns]]
     for _, row in df.iterrows():
         data.append([Paragraph(str(cell), normal_style) for cell in row])
-
-    num_cols = len(df.columns)
-    col_widths = [max(60, 800/num_cols)] * num_cols  # larghezza minima + ridistribuzione
-
+    
+    col_widths = [500 / len(df.columns)] * len(df.columns)
+    
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 7),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('TOPPADDING', (0, 1), (-1, -1), 3),
-        ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 7),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,0), 6),
+        ('TOPPADDING', (0,1), (-1,-1), 3),
+        ('GRID', (0,0), (-1,-1), 0.25, colors.black)
     ]))
-
-    elements.append(Paragraph(titolo, titolo_style))
-    elements.append(Spacer(1, 6))
+    
     elements.append(table)
-    elements.append(Spacer(1, 12))
+    elements.append(Spacer(1,12))
     return elements
 
-# --- Funzione principale ---
-def genera_report(esn):
-    # Controllo file
-    for f in [ICSS_FILE, THD_FILE, CLAIM_FILE, LOGO_FILE]:
-        if not os.path.exists(f):
-            print(f"❌ File non trovato: {f}")
-            return
-
-    pdf_file = os.path.join(BASE_DIR, f"Report_{esn}.pdf")
-    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
+def genera_report(esn, logo_path="logo.jpg"):
+    pdf_buffer = BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
     elements = []
-
+    
     # Logo a sinistra
     try:
-        logo = Image(LOGO_FILE, width=120, height=50)
-        header = Table([[logo, ""]], colWidths=[130, 600])
+        logo = Image(logo_path, width=100, height=40)
+        header = Table([[logo, ""]], colWidths=[100, 500])
         elements.append(header)
     except:
         elements.append(Paragraph("Company Report", styles['Title']))
-
-    elements.append(Spacer(1, 12))
+    
+    elements.append(Spacer(1,12))
     elements.append(Paragraph(f"Report ESN {esn}", styles['Title']))
-    elements.append(Spacer(1, 20))
-
+    elements.append(Spacer(1,20))
+    
     # --- Dossier ICSS ---
-    df_icss = pd.read_excel(ICSS_FILE)
+    df_icss = pd.read_excel("Data Base Service.xlsx")
     df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)].copy()
     if not df_icss_filtrato.empty:
         df_icss_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_icss_filtrato['WAT_ORIGINAL'], errors='coerce')
@@ -90,9 +72,9 @@ def genera_report(esn):
         titolo_icss = "Dossier ICSS - 0"
         df_icss_risultato = pd.DataFrame()
     elements += crea_tabella(df_icss_risultato, titolo_icss)
-
+    
     # --- THD ---
-    df_thd = pd.read_excel(THD_FILE)
+    df_thd = pd.read_excel("THD FM.xlsx")
     df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)].copy()
     if not df_thd_filtrato.empty:
         df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
@@ -103,9 +85,9 @@ def genera_report(esn):
         titolo_thd = "THD - 0"
         df_thd_risultato = pd.DataFrame()
     elements += crea_tabella(df_thd_risultato, titolo_thd)
-
+    
     # --- Claim ---
-    df_claim = pd.read_excel(CLAIM_FILE)
+    df_claim = pd.read_excel("Data Base Warranty.xlsx")
     df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)].copy()
     if not df_claim_filtrato.empty:
         df_claim_filtrato['Claim Payment Date'] = pd.to_datetime(df_claim_filtrato['Claim Payment Date'], errors='coerce')
@@ -118,11 +100,7 @@ def genera_report(esn):
         titolo_claim = "Claim - Total 0"
         df_claim_risultato = pd.DataFrame()
     elements += crea_tabella(df_claim_risultato, titolo_claim)
-
+    
     doc.build(elements)
-    print(f"✅ Report generato: {pdf_file}")
-
-# === Avvio interattivo ===
-if __name__ == "__main__":
-    esn = input("Inserisci Engine Serial Number (ESN): ")
-    genera_report(esn)
+    pdf_buffer.seek(0)
+    return pdf_buffer
