@@ -106,4 +106,23 @@ def genera_report(esn, base_dir):
     print(f"✅ Report generated: {pdf_file}")
 
 def genera_excel(esn, base_dir):
-    output_file = os.path.join(base
+    output_file = os.path.join(base_dir, f"Report_{esn}.xlsx")
+    with pd.ExcelWriter(output_file) as writer:
+        # ICSS
+        df_icss = pd.read_excel(os.path.join(base_dir, "Data Base Service.xlsx"))
+        df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)]
+        df_icss_filtrato.to_excel(writer, sheet_name="Dossier ICSS", index=False)
+        # Riga vuota
+        pd.DataFrame().to_excel(writer, sheet_name="Dossier ICSS", index=False, startrow=len(df_icss_filtrato)+1)
+
+        # THD
+        df_thd = pd.read_excel(os.path.join(base_dir, "THD FM.xlsx"))
+        df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)]
+        df_thd_filtrato.to_excel(writer, sheet_name="THD", index=False, startrow=0)
+
+        # Claim
+        df_claim = pd.read_excel(os.path.join(base_dir, "Data Base Warranty.xlsx"))
+        df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)]
+        df_claim_filtrato.to_excel(writer, sheet_name="Claim", index=False, startrow=0)
+
+    print(f"✅ Excel generated: {output_file}")
