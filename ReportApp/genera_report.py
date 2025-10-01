@@ -79,7 +79,7 @@ def genera_report(esn, base_dir):
         df_icss_filtrato = df_icss_filtrato.sort_values("WAT_ORIGINAL", ascending=False)
         title_icss = f"ICSS Dossiers - {len(df_icss_filtrato)}"
    df_icss_result = df_icss_filtrato[
-    ["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number", "Application FPT (Engine FPT)", "Pre-diagnosis", "Repair Description"]
+    ["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number", "Pre-diagnosis", "Repair Description"]
 ]
     else:
         title_icss = "ICSS Dossiers - 0"
