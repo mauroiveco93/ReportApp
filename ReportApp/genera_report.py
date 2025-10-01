@@ -26,7 +26,7 @@ def crea_tabella(df, titolo):
         data.append([Paragraph(str(cell), normal_style) for cell in row])
 
     num_cols = len(df.columns)
-    col_widths = [700 / num_cols] * num_cols  # adatta a landscape A4
+    col_widths = [700 / num_cols] * num_cols  # adattato a landscape A4
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
