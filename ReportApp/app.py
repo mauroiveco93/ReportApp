@@ -3,7 +3,7 @@ from genera_report import genera_report
 import os
 
 st.set_page_config(page_title="Generatore Report Motore", layout="wide")
-st.image("logo.jpg", width=150)
+st.image("assets/logo.jpg", width=150)
 st.title("Generatore Report Motore")
 
 esn = st.text_input("Inserisci Engine Serial Number (ESN)")
