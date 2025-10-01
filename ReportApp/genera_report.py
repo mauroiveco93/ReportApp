@@ -1,21 +1,29 @@
+import os
 import pandas as pd
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.pagesizes import landscape, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-import os
 
 styles = getSampleStyleSheet()
 normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, leading=9)
+titolo_style = ParagraphStyle('titolo', parent=styles['Heading2'], spaceAfter=10, alignment=0)
+
+# Percorsi relativi
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ICSS_PATH = os.path.join(BASE_DIR, "Data Base Service.xlsx")
+THD_PATH = os.path.join(BASE_DIR, "THD FM.xlsx")
+CLAIM_PATH = os.path.join(BASE_DIR, "Data Base Warranty.xlsx")
+LOGO_PATH = os.path.join(BASE_DIR, "logo.jpg")
+
 
 def crea_tabella(df, titolo):
     elements = []
-    titolo_style = ParagraphStyle('titolo', parent=styles['Heading2'], spaceAfter=10, alignment=0)
+    elements.append(Paragraph(titolo, titolo_style))
+    elements.append(Spacer(1, 6))
 
     if df.empty:
-        elements.append(Paragraph(titolo, titolo_style))
-        elements.append(Spacer(1, 6))
-        elements.append(Paragraph("No values found", styles['Normal']))
+        elements.append(Paragraph("No values found", normal_style))
         elements.append(Spacer(1, 12))
         return elements
 
@@ -25,8 +33,8 @@ def crea_tabella(df, titolo):
         data.append([Paragraph(str(cell), normal_style) for cell in row])
 
     num_cols = len(df.columns)
-    # calcola larghezza proporzionale
-    col_widths = [max(80, 700 / num_cols)] * num_cols
+    page_width = 800  # larghezza massima della tabella
+    col_widths = [page_width / num_cols] * num_cols
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
@@ -40,33 +48,30 @@ def crea_tabella(df, titolo):
         ('TOPPADDING', (0, 1), (-1, -1), 3),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
     ]))
-
-    elements.append(Paragraph(titolo, titolo_style))
-    elements.append(Spacer(1, 6))
     elements.append(table)
     elements.append(Spacer(1, 12))
     return elements
 
+
 def genera_report(esn):
-    pdf_file = f"Report_{esn}.pdf"
-    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
+    pdf_file = os.path.join(BASE_DIR, f"Report_{esn}.pdf")
+    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
     elements = []
 
     # Logo a sinistra
-    try:
-        if os.path.exists("logo.jpg"):
-            logo = Image("logo.jpg", width=100, height=40)
-            header = Table([[logo, Paragraph("", styles['Normal'])]], colWidths=[100, 700])
-            elements.append(header)
-    except:
+    if os.path.exists(LOGO_PATH):
+        logo = Image(LOGO_PATH, width=100, height=40)
+        header = Table([[logo, Paragraph("Company Report", styles['Title'])]], colWidths=[100, 500])
+        elements.append(header)
+    else:
         elements.append(Paragraph("Company Report", styles['Title']))
 
     elements.append(Spacer(1, 12))
     elements.append(Paragraph(f"Report ESN {esn}", styles['Title']))
     elements.append(Spacer(1, 20))
 
-    # === Dossier ICSS ===
-    df_icss = pd.read_excel("Data Base Service.xlsx")
+    # --- Dossier ICSS ---
+    df_icss = pd.read_excel(ICSS_PATH)
     df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)].copy()
     if not df_icss_filtrato.empty:
         df_icss_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_icss_filtrato['WAT_ORIGINAL'], errors='coerce')
@@ -78,8 +83,8 @@ def genera_report(esn):
         df_icss_risultato = pd.DataFrame()
     elements += crea_tabella(df_icss_risultato, titolo_icss)
 
-    # === THD ===
-    df_thd = pd.read_excel("THD FM.xlsx")
+    # --- THD ---
+    df_thd = pd.read_excel(THD_PATH)
     df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)].copy()
     if not df_thd_filtrato.empty:
         df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
@@ -91,8 +96,8 @@ def genera_report(esn):
         df_thd_risultato = pd.DataFrame()
     elements += crea_tabella(df_thd_risultato, titolo_thd)
 
-    # === Claim ===
-    df_claim = pd.read_excel("Data Base Warranty.xlsx")
+    # --- Claim ---
+    df_claim = pd.read_excel(CLAIM_PATH)
     df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)].copy()
     if not df_claim_filtrato.empty:
         df_claim_filtrato['Claim Payment Date'] = pd.to_datetime(df_claim_filtrato['Claim Payment Date'], errors='coerce')
