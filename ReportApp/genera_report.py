@@ -49,17 +49,19 @@ def create_table(df, title):
     return elements
 
 def genera_report(esn, base_dir):
-    pdf_file = f"Report_{esn}.pdf"
+    pdf_file = os.path.join(base_dir, f"Report_{esn}.pdf")
     doc = SimpleDocTemplate(pdf_file, pagesize=A4, leftMargin=20, rightMargin=20)
     elements = []
 
-    # Logo in alto a sinistra
+    # --- Logo a sinistra ---
     try:
         logo_path = os.path.join(base_dir, "logo.jpg")
-        logo = Image(logo_path, width=100, height=40)
-        elements.append(logo)
+        if os.path.exists(logo_path):
+            logo = Image(logo_path, width=100, height=40)
+            header = Table([[logo, ""]], colWidths=[100, 400])
+            elements.append(header)
     except Exception:
-        elements.append(Paragraph("Logo missing", styles['Title']))
+        pass  # se il logo manca, si continua senza
 
     elements.append(Spacer(1, 20))
     elements.append(Paragraph(f"Report for ESN {esn}", styles['Heading1']))
@@ -73,9 +75,10 @@ def genera_report(esn, base_dir):
         df_icss_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_icss_filtrato['WAT_ORIGINAL'], errors='coerce')
         df_icss_filtrato = df_icss_filtrato.sort_values("WAT_ORIGINAL", ascending=False)
         title_icss = f"ICSS Dossiers - {len(df_icss_filtrato)}"
-        df_icss_result = df_icss_filtrato[
-            ["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number", "Pre-diagnosis", "Repair Description"]
-        ]
+        df_icss_result = df_icss_filtrato[[
+            "DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number",
+            "Pre-diagnosis", "Repair Description"
+        ]]
     else:
         title_icss = "ICSS Dossiers - 0"
         df_icss_result = pd.DataFrame()
@@ -89,10 +92,10 @@ def genera_report(esn, base_dir):
         df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
         df_thd_filtrato = df_thd_filtrato.sort_values("Submitted On", ascending=False)
         title_thd = f"THD - {len(df_thd_filtrato)}"
-        df_thd_result = df_thd_filtrato[
-            ["Request/Report Number", "Submitted On", "Request/Report Subtype", "Dealer",
-             "Question", "Symptom", "Solution", "Status Reason", "Product Type"]
-        ]
+        df_thd_result = df_thd_filtrato[[
+            "Request/Report Number","Submitted On","Request/Report Subtype","Dealer",
+            "Question","Symptom","Solution","Status Reason","Product Type"
+        ]]
     else:
         title_thd = "THD - 0"
         df_thd_result = pd.DataFrame()
@@ -108,10 +111,10 @@ def genera_report(esn, base_dir):
         total_amount = df_claim_filtrato["Approved Amount"].sum()
         currency = df_claim_filtrato["Local Currency Code"].iloc[0] if "Local Currency Code" in df_claim_filtrato.columns else ""
         title_claim = f"Claims - Total {total_amount:.2f} {currency}"
-        df_claim_result = df_claim_filtrato[
-            ["FPT Engine Family", "Claim Number", "Payed Dealer Name",
-             "Failure Comment", "Claim Payment Date", "Approved Amount", "Local Currency Code"]
-        ]
+        df_claim_result = df_claim_filtrato[[
+            "FPT Engine Family","Claim Number","Payed Dealer Name",
+            "Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"
+        ]]
     else:
         title_claim = "Claims - Total 0"
         df_claim_result = pd.DataFrame()
