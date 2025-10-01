@@ -1,42 +1,35 @@
 import streamlit as st
 import os
-from genera_report import genera_report  # la tua funzione che crea il PDF
+from genera_report import genera_report
 
-# ======== Layout della pagina ========
-st.set_page_config(
-    page_title="Report Generator",
-    layout="wide"
-)
+st.set_page_config(page_title="Report Generator", layout="wide")
 
-# ======== Logo a sinistra ========
-logo_path = os.path.join(os.path.dirname(__file__), "logo.jpg")
+# Logo a sinistra
+BASE_DIR = os.path.dirname(__file__)
+logo_path = os.path.join(BASE_DIR, "logo.jpg")
 if os.path.exists(logo_path):
     st.image(logo_path, width=150, use_container_width=False)
 
-# ======== Titolo ========
 st.title("ESN Report Generator")
+st.markdown("Inserisci il **Engine Serial Number (ESN)** per generare il report dai database.")
 
-st.markdown("""
-Inserisci il **Engine Serial Number (ESN)** per generare il report dai database.
-""")
-
-# ======== Input interattivo ========
+# Input interattivo ESN
 esn = st.text_input("Engine Serial Number")
 
-# ======== Bottone per generare il report ========
+# Bottone genera report
 if st.button("Genera Report"):
     if esn.strip() == "":
         st.warning("⚠️ Inserisci un ESN valido!")
     else:
         try:
-            pdf_file = genera_report(esn.strip())  # la funzione che hai già creato
-            st.success(f"✅ Report generato: {pdf_file}")
-            # Mostra link per scaricare il PDF
+            pdf_file = genera_report(esn.strip())
+            st.success(f"✅ Report generato: {os.path.basename(pdf_file)}")
+            # Download PDF
             with open(pdf_file, "rb") as f:
                 st.download_button(
                     label="Scarica PDF",
                     data=f,
-                    file_name=pdf_file,
+                    file_name=os.path.basename(pdf_file),
                     mime="application/pdf"
                 )
         except Exception as e:
