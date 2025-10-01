@@ -1,5 +1,6 @@
 import streamlit as st
-from generate import genera_report, genera_excel
+from genera_report import genera_report, genera_excel
+import time
 
 st.set_page_config(page_title="Report App", layout="wide")
 st.title("Report Generator")
@@ -13,8 +14,7 @@ esn = st.text_input("Enter Engine Serial Number (ESN):")
 if esn:
     st.info("Generating report...")
 
-    # Progress bar
-    import time
+    # Progress bar finta
     progress = st.progress(0)
     for i in range(1, 101):
         time.sleep(0.01)
