@@ -3,7 +3,7 @@ import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 def genera_report(esn):
     # ====== Percorsi relativi ======
@@ -64,12 +64,16 @@ def genera_report(esn):
     # Logo a sinistra
     if os.path.exists(logo_path):
         img = Image(logo_path, width=150, height=50)
+        img.hAlign = 'LEFT'
         elements.append(img)
         elements.append(Spacer(1, 12))
 
     # Titolo generale
     elements.append(Paragraph(f"Report ESN {esn}", styles['Title']))
     elements.append(Spacer(1, 12))
+
+    # ====== Stile per celle multilinea ======
+    cell_style = ParagraphStyle(name='cell', fontSize=8, leading=10)
 
     # ====== Funzione per creare tabelle ======
     def crea_tabella(df, titolo):
@@ -80,8 +84,13 @@ def genera_report(esn):
         if df.empty:
             elems.append(Paragraph("No values found", styles['Normal']))
         else:
-            data = [list(df.columns)] + df.values.tolist()
-            t = Table(data, repeatRows=1, hAlign='LEFT')
+            # Converti tutte le celle in Paragraph per testo multilinea
+            data = [ [Paragraph(str(c), cell_style) for c in df.columns] ] + \
+                   [ [Paragraph(str(c), cell_style) for c in row] for row in df.values.tolist()]
+
+            # Imposta larghezza colonne (adatta al numero di colonne)
+            col_widths = [80]*len(df.columns)
+            t = Table(data, colWidths=col_widths, repeatRows=1, hAlign='LEFT')
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
                 ('TEXTCOLOR',(0,0),(-1,0),colors.black),
@@ -91,7 +100,6 @@ def genera_report(esn):
                 ('FONTSIZE', (0,0), (-1,-1), 8),
                 ('INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
                 ('BOX', (0,0), (-1,-1), 0.25, colors.black),
-                ('WORDWRAP', (0,0), (-1,-1), 'CJK'),  # evita scritte accavallate
             ]))
             elems.append(t)
         elems.append(Spacer(1, 12))
