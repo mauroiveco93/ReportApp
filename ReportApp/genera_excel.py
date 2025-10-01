@@ -53,13 +53,11 @@ def genera_excel(esn, base_dir):
                 "Failure Comment", "Claim Payment Date", "Approved Amount", "Local Currency Code"
             ])
 
-        # Scrive tutto in un singolo file Excel con righe vuote tra le tabelle
+        # Scrive in un file Excel con tre fogli separati
         with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
-            df_icss_result.to_excel(writer, sheet_name="Report", index=False, startrow=0)
-            startrow = len(df_icss_result) + 2
-            df_thd_result.to_excel(writer, sheet_name="Report", index=False, startrow=startrow)
-            startrow += len(df_thd_result) + 2
-            df_claim_result.to_excel(writer, sheet_name="Report", index=False, startrow=startrow)
+            df_icss_result.to_excel(writer, sheet_name="ICSS", index=False)
+            df_thd_result.to_excel(writer, sheet_name="THD", index=False)
+            df_claim_result.to_excel(writer, sheet_name="Claims", index=False)
 
         return excel_file
 
