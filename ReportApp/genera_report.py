@@ -1,7 +1,6 @@
-import os
 import pandas as pd
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
@@ -10,7 +9,7 @@ normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, lea
 
 def crea_tabella(df, titolo):
     elements = []
-    titolo_style = ParagraphStyle('titolo', parent=styles['Heading2'], spaceAfter=10, alignment=0)
+    titolo_style = ParagraphStyle('title', parent=styles['Heading2'], spaceAfter=10, alignment=0)
 
     if df.empty:
         elements.append(Paragraph(titolo, titolo_style))
@@ -46,60 +45,65 @@ def crea_tabella(df, titolo):
     elements.append(Spacer(1, 12))
     return elements
 
-def genera_report(esn, base_dir="."):
-    pdf_file = os.path.join(base_dir, f"Report_{esn}.pdf")
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, leftMargin=20, rightMargin=20)
-    elements = []
-
-    # Logo + titolo
+def genera_report(esn):
     try:
-        logo = Image(os.path.join(base_dir, "logo.jpg"), width=100, height=40)
-        elements.append(logo)
-    except:
-        pass
+        pdf_file = f"Report_{esn}.pdf"
+        doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
+        elements = []
 
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph("Engine Report", styles['Title']))
-    elements.append(Spacer(1, 20))
+        # Logo top-left
+        try:
+            logo = Image("logo.jpg", width=100, height=40)
+            elements.append(logo)
+        except:
+            elements.append(Paragraph("Engine Report", styles['Title']))
 
-    # --- Service ---
-    df_service = pd.read_excel(os.path.join(base_dir, "Data Base Service.xlsx"))
-    df_service_filtrato = df_service[df_service["Engine Serial Number"].astype(str) == str(esn)].copy()
-    if not df_service_filtrato.empty:
-        df_service_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_service_filtrato['WAT_ORIGINAL'], errors='coerce')
-        df_service_filtrato = df_service_filtrato.sort_values("WAT_ORIGINAL", ascending=False)
-        titolo_service = f"Dossier ICSS - {len(df_service_filtrato)}"
-        df_service_risultato = df_service_filtrato[["DOSSIER ID","WAT_ORIGINAL","DEALER","Engine Serial Number","Pre-diagnosis","Repair Description"]]
-    else:
-        titolo_service = "Dossier ICSS - 0"
-        df_service_risultato = pd.DataFrame()
-    elements += crea_tabella(df_service_risultato, titolo_service)
+        elements.append(Spacer(1, 12))
+        elements.append(Paragraph(f"Engine Report - ESN {esn}", styles['Title']))
+        elements.append(Spacer(1, 20))
 
-    # --- THD ---
-    df_thd = pd.read_excel(os.path.join(base_dir, "THD FM.xlsx"))
-    df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)].copy()
-    if not df_thd_filtrato.empty:
-        df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
-        df_thd_filtrato = df_thd_filtrato.sort_values("Submitted On", ascending=False)
-        titolo_thd = f"THD - {len(df_thd_filtrato)}"
-        df_thd_risultato = df_thd_filtrato[["Request/Report Number","Submitted On","Request/Report Subtype","Dealer","Question","Symptom","Solution","Status Reason","Product Type"]]
-    else:
-        titolo_thd = "THD - 0"
-        df_thd_risultato = pd.DataFrame()
-    elements += crea_tabella(df_thd_risultato, titolo_thd)
+        # --- Dossier ICSS ---
+        df_icss = pd.read_excel("Data Base Service.xlsx")
+        df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)].copy()
+        if not df_icss_filtrato.empty:
+            df_icss_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_icss_filtrato['WAT_ORIGINAL'], errors='coerce')
+            df_icss_filtrato = df_icss_filtrato.sort_values("WAT_ORIGINAL", ascending=False)
+            titolo_icss = f"Dossier ICSS - {len(df_icss_filtrato)}"
+            df_icss_risultato = df_icss_filtrato[["DOSSIER ID","WAT_ORIGINAL","DEALER","Engine Serial Number","Pre-diagnosis","Repair Description"]]
+        else:
+            titolo_icss = "Dossier ICSS - 0"
+            df_icss_risultato = pd.DataFrame()
+        elements += crea_tabella(df_icss_risultato, titolo_icss)
 
-    # --- Claim ---
-    df_claim = pd.read_excel(os.path.join(base_dir, "Data Base Warranty.xlsx"))
-    df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)].copy()
-    if not df_claim_filtrato.empty:
-        df_claim_filtrato['Claim Payment Date'] = pd.to_datetime(df_claim_filtrato['Claim Payment Date'], errors='coerce')
-        df_claim_filtrato = df_claim_filtrato.sort_values("Claim Payment Date", ascending=False)
-        titolo_claim = f"Claim - {len(df_claim_filtrato)}"
-        df_claim_risultato = df_claim_filtrato[["FPT Engine Family","Claim Number","Payed Dealer Name","Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"]]
-    else:
-        titolo_claim = "Claim - 0"
-        df_claim_risultato = pd.DataFrame()
-    elements += crea_tabella(df_claim_risultato, titolo_claim)
+        # --- THD ---
+        df_thd = pd.read_excel("THD FM.xlsx")
+        df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)].copy()
+        if not df_thd_filtrato.empty:
+            df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
+            df_thd_filtrato = df_thd_filtrato.sort_values("Submitted On", ascending=False)
+            titolo_thd = f"THD - {len(df_thd_filtrato)}"
+            df_thd_risultato = df_thd_filtrato[["Request/Report Number","Submitted On","Request/Report Subtype","Dealer","Question","Symptom","Solution","Status Reason","Product Type"]]
+        else:
+            titolo_thd = "THD - 0"
+            df_thd_risultato = pd.DataFrame()
+        elements += crea_tabella(df_thd_risultato, titolo_thd)
 
-    doc.build(elements)
-    return pdf_file
+        # --- Claim ---
+        df_claim = pd.read_excel("Data Base Warranty.xlsx")
+        df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)].copy()
+        if not df_claim_filtrato.empty:
+            df_claim_filtrato['Claim Payment Date'] = pd.to_datetime(df_claim_filtrato['Claim Payment Date'], errors='coerce')
+            df_claim_filtrato = df_claim_filtrato.sort_values("Claim Payment Date", ascending=False)
+            total_amount = df_claim_filtrato["Approved Amount"].sum()
+            currency = df_claim_filtrato["Local Currency Code"].iloc[0] if "Local Currency Code" in df_claim_filtrato.columns else ""
+            titolo_claim = f"Claim - Total {total_amount:.2f} {currency}"
+            df_claim_risultato = df_claim_filtrato[["FPT Engine Family","Claim Number","Payed Dealer Name","Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"]]
+        else:
+            titolo_claim = "Claim - Total 0"
+            df_claim_risultato = pd.DataFrame()
+        elements += crea_tabella(df_claim_risultato, titolo_claim)
+
+        doc.build(elements)
+        return pdf_file
+    except Exception as e:
+        raise RuntimeError(f"Error generating PDF: {e}")
