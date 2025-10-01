@@ -16,8 +16,8 @@ def genera_excel(esn, base_dir):
             df_icss_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_icss_filtrato['WAT_ORIGINAL'], errors='coerce')
             df_icss_filtrato = df_icss_filtrato.sort_values("WAT_ORIGINAL", ascending=False)
             df_icss_result = df_icss_filtrato[
-    ["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number", "Pre-diagnosis", "Repair Description"]
-]
+                ["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number", "Pre-diagnosis", "Repair Description"]
+            ]
         else:
             df_icss_result = pd.DataFrame(columns=["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number", "Pre-diagnosis", "Repair Description"])
 
