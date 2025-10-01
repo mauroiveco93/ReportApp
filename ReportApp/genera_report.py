@@ -58,13 +58,11 @@ def genera_report(esn):
     doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
     elements = []
 
-    # Logo a sinistra
+    # Logo a sinistra nel PDF
     if os.path.exists(LOGO_PATH):
         logo = Image(LOGO_PATH, width=100, height=40)
-        header = Table([[logo, Paragraph("Company Report", styles['Title'])]], colWidths=[100, 500])
+        header = Table([[logo, ""]], colWidths=[100, 500])
         elements.append(header)
-    else:
-        elements.append(Paragraph("Company Report", styles['Title']))
 
     elements.append(Spacer(1, 12))
     elements.append(Paragraph(f"Report ESN {esn}", styles['Title']))
