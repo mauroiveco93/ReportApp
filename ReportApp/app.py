@@ -1,35 +1,39 @@
 import streamlit as st
 from generate import genera_report, genera_excel
-import os
 
 st.set_page_config(page_title="Report App", layout="wide")
+st.title("Report Generator")
 
-current_dir = os.path.dirname(__file__)
-logo_path = os.path.join(current_dir, "logo.jpg")
+# Logo a sinistra
+st.image("logo.jpg", width=150)
 
-# Logo
-try:
-    st.image(logo_path, width=150)
-except:
-    st.title("Report App")
-
-st.title("Engine Serial Number Report")
-
-# Inserimento ESN
+# Input ESN
 esn = st.text_input("Enter Engine Serial Number (ESN):")
 
 if esn:
-    progress_bar = st.progress(0)
-    st.write("Generating report...")
+    st.info("Generating report...")
+
+    # Progress bar
+    import time
+    progress = st.progress(0)
+    for i in range(1, 101):
+        time.sleep(0.01)
+        progress.progress(i)
 
     # PDF
-    pdf_file = genera_report(esn)
-    progress_bar.progress(50)
+    pdf_data = genera_report(esn)
+    st.download_button(
+        label="Download PDF",
+        data=pdf_data,
+        file_name=f"Report_{esn}.pdf",
+        mime="application/pdf"
+    )
 
     # Excel
-    excel_file = genera_excel(esn)
-    progress_bar.progress(100)
-
-    # Download buttons
-    st.download_button("Download PDF", pdf_file, file_name=f"Report_{esn}.pdf", mime="application/pdf")
-    st.download_button("Download Excel", excel_file, file_name=f"Report_{esn}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    excel_data = genera_excel(esn)
+    st.download_button(
+        label="Download Excel",
+        data=excel_data,
+        file_name=f"Report_{esn}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
