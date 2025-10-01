@@ -11,7 +11,7 @@ st.set_page_config(
 # ======== Logo a sinistra ========
 logo_path = os.path.join(os.path.dirname(__file__), "logo.jpg")
 if os.path.exists(logo_path):
-    st.image(logo_path, width=150, use_column_width=False)  # larghezza fissa
+    st.image(logo_path, width=150, use_container_width=False)
 
 # ======== Titolo ========
 st.title("ESN Report Generator")
