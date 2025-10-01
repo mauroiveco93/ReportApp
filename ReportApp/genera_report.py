@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -57,7 +57,15 @@ def genera_report(esn):
 
     # ====== Creazione PDF ======
     pdf_file = os.path.join(output_dir, f"Report_{esn}.pdf")
-    doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=30,leftMargin=30, topMargin=30,bottomMargin=30)
+    doc = SimpleDocTemplate(
+        pdf_file,
+        pagesize=landscape(A4),
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=30
+    )
+
     styles = getSampleStyleSheet()
     elements = []
 
@@ -88,8 +96,12 @@ def genera_report(esn):
             data = [ [Paragraph(str(c), cell_style) for c in df.columns] ] + \
                    [ [Paragraph(str(c), cell_style) for c in row] for row in df.values.tolist()]
 
-            # Imposta larghezza colonne (adatta al numero di colonne)
-            col_widths = [80]*len(df.columns)
+            # Imposta larghezza colonne proporzionale
+            total_cols = len(df.columns)
+            page_width = 1030  # A4 landscape ~ 11.7 inch * 88 punti/inch
+            col_width = page_width / total_cols
+            col_widths = [col_width]*total_cols
+
             t = Table(data, colWidths=col_widths, repeatRows=1, hAlign='LEFT')
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
@@ -114,3 +126,9 @@ def genera_report(esn):
     doc.build(elements)
 
     return pdf_file
+
+# ====== Avvio interattivo ======
+if __name__ == "__main__":
+    esn = input("Inserisci Engine Serial Number (ESN): ")
+    report = genera_report(esn)
+    print(f"✅ Report generato: {report}")
