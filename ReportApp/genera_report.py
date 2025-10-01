@@ -8,6 +8,9 @@ from reportlab.lib.styles import getSampleStyleSheet
 def genera_report(esn):
     # ====== Percorsi relativi ======
     BASE_DIR = os.path.dirname(__file__)
+    output_dir = os.path.join(BASE_DIR, "output")
+    os.makedirs(output_dir, exist_ok=True)  # crea cartella se non esiste
+
     file_icss = os.path.join(BASE_DIR, "Data Base Service.xlsx")
     file_thd = os.path.join(BASE_DIR, "THD FM.xlsx")
     file_claim = os.path.join(BASE_DIR, "Data Base Warranty.xlsx")
@@ -53,14 +56,14 @@ def genera_report(esn):
         df_claim_risultato = pd.DataFrame(columns=["FPT Engine Family","Claim Number","Payed Dealer Name","Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"])
 
     # ====== Creazione PDF ======
-    pdf_file = os.path.join(BASE_DIR, f"Report_{esn}.pdf")
+    pdf_file = os.path.join(output_dir, f"Report_{esn}.pdf")
     doc = SimpleDocTemplate(pdf_file, pagesize=A4, rightMargin=30,leftMargin=30, topMargin=30,bottomMargin=30)
     styles = getSampleStyleSheet()
     elements = []
 
-    # Logo
+    # Logo a sinistra
     if os.path.exists(logo_path):
-        img = Image(logo_path, width=150, height=50)  # dimensione fissa
+        img = Image(logo_path, width=150, height=50)
         elements.append(img)
         elements.append(Spacer(1, 12))
 
@@ -78,7 +81,7 @@ def genera_report(esn):
             elems.append(Paragraph("No values found", styles['Normal']))
         else:
             data = [list(df.columns)] + df.values.tolist()
-            t = Table(data, repeatRows=1)
+            t = Table(data, repeatRows=1, hAlign='LEFT')
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
                 ('TEXTCOLOR',(0,0),(-1,0),colors.black),
@@ -88,6 +91,7 @@ def genera_report(esn):
                 ('FONTSIZE', (0,0), (-1,-1), 8),
                 ('INNERGRID', (0,0), (-1,-1), 0.25, colors.black),
                 ('BOX', (0,0), (-1,-1), 0.25, colors.black),
+                ('WORDWRAP', (0,0), (-1,-1), 'CJK'),  # evita scritte accavallate
             ]))
             elems.append(t)
         elems.append(Spacer(1, 12))
@@ -101,4 +105,4 @@ def genera_report(esn):
     # Build PDF
     doc.build(elements)
 
-    return f"Report_{esn}.pdf"
+    return pdf_file
