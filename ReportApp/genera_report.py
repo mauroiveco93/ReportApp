@@ -10,22 +10,19 @@ styles = getSampleStyleSheet()
 normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, leading=9)
 titolo_style = ParagraphStyle('titolo', parent=styles['Heading2'], spaceAfter=10, alignment=0)
 
-# --- Percorsi relativi ---
-BASE_DIR = os.path.dirname(__file__)
+# --- Percorsi file ---
+BASE_DIR = os.getcwd()  # cartella corrente
 ICSS_FILE = os.path.join(BASE_DIR, "Data Base Service.xlsx")
 THD_FILE = os.path.join(BASE_DIR, "THD FM.xlsx")
 CLAIM_FILE = os.path.join(BASE_DIR, "Data Base Warranty.xlsx")
 LOGO_FILE = os.path.join(BASE_DIR, "logo.jpg")
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# --- Funzione tabella ---
+# --- Funzione creazione tabella ---
 def crea_tabella(df, titolo):
     elements = []
-    elements.append(Paragraph(titolo, titolo_style))
-    elements.append(Spacer(1, 6))
-
     if df.empty:
+        elements.append(Paragraph(titolo, titolo_style))
+        elements.append(Spacer(1, 6))
         elements.append(Paragraph("No values found", styles['Normal']))
         elements.append(Spacer(1, 12))
         return elements
@@ -36,7 +33,7 @@ def crea_tabella(df, titolo):
         data.append([Paragraph(str(cell), normal_style) for cell in row])
 
     num_cols = len(df.columns)
-    col_widths = [750 / num_cols] * num_cols  # adattamento per landscape A4
+    col_widths = [max(60, 800/num_cols)] * num_cols  # larghezza minima + ridistribuzione
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
@@ -51,20 +48,28 @@ def crea_tabella(df, titolo):
         ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
     ]))
 
+    elements.append(Paragraph(titolo, titolo_style))
+    elements.append(Spacer(1, 6))
     elements.append(table)
     elements.append(Spacer(1, 12))
     return elements
 
 # --- Funzione principale ---
 def genera_report(esn):
-    pdf_file = os.path.join(OUTPUT_DIR, f"Report_{esn}.pdf")
+    # Controllo file
+    for f in [ICSS_FILE, THD_FILE, CLAIM_FILE, LOGO_FILE]:
+        if not os.path.exists(f):
+            print(f"❌ File non trovato: {f}")
+            return
+
+    pdf_file = os.path.join(BASE_DIR, f"Report_{esn}.pdf")
     doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
     elements = []
 
     # Logo a sinistra
     try:
-        logo = Image(LOGO_FILE, width=100, height=40)
-        header = Table([[logo, ""]], colWidths=[100, 650])
+        logo = Image(LOGO_FILE, width=120, height=50)
+        header = Table([[logo, ""]], colWidths=[130, 600])
         elements.append(header)
     except:
         elements.append(Paragraph("Company Report", styles['Title']))
@@ -93,8 +98,7 @@ def genera_report(esn):
         df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
         df_thd_filtrato = df_thd_filtrato.sort_values("Submitted On", ascending=False)
         titolo_thd = f"THD - {len(df_thd_filtrato)}"
-        df_thd_risultato = df_thd_filtrato[["Request/Report Number","Submitted On","Request/Report Subtype","Dealer",
-                                            "Question","Symptom","Solution","Status Reason","Product Type"]]
+        df_thd_risultato = df_thd_filtrato[["Request/Report Number","Submitted On","Request/Report Subtype","Dealer","Question","Symptom","Solution","Status Reason","Product Type"]]
     else:
         titolo_thd = "THD - 0"
         df_thd_risultato = pd.DataFrame()
@@ -109,8 +113,7 @@ def genera_report(esn):
         total_amount = df_claim_filtrato["Approved Amount"].sum()
         currency = df_claim_filtrato["Local Currency Code"].iloc[0] if "Local Currency Code" in df_claim_filtrato.columns else ""
         titolo_claim = f"Claim - Total {total_amount:.2f} {currency}"
-        df_claim_risultato = df_claim_filtrato[["FPT Engine Family","Claim Number","Payed Dealer Name",
-                                               "Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"]]
+        df_claim_risultato = df_claim_filtrato[["FPT Engine Family","Claim Number","Payed Dealer Name","Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"]]
     else:
         titolo_claim = "Claim - Total 0"
         df_claim_risultato = pd.DataFrame()
@@ -119,7 +122,7 @@ def genera_report(esn):
     doc.build(elements)
     print(f"✅ Report generato: {pdf_file}")
 
-# --- Avvio interattivo ---
+# === Avvio interattivo ===
 if __name__ == "__main__":
     esn = input("Inserisci Engine Serial Number (ESN): ")
     genera_report(esn)
