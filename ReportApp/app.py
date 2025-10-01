@@ -1,49 +1,43 @@
-import os
 import streamlit as st
 from genera_report import genera_report
 from genera_excel import genera_excel
+import os
 
-# App layout
-base_dir = os.path.dirname(__file__)
+# Imposta cartella base
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-logo_path = os.path.join(base_dir, "logo.jpg")
-if os.path.exists(logo_path):
+# Logo in alto a sinistra
+logo_path = os.path.join(BASE_DIR, "logo.jpg")
+try:
     st.image(logo_path, width=150)
+except Exception:
+    pass
 
-st.title("Engine Report Generator")
+st.title("Engine Report")  # titolo nell'app, rimane visibile
 
+# Input ESN
 esn = st.text_input("Enter Engine Serial Number (ESN):")
 
-if st.button("Generate PDF Report"):
-    if esn:
-        try:
-            with st.spinner("Generating PDF report..."):
-                pdf_path = genera_report(esn, base_dir)
-            with open(pdf_path, "rb") as f:
-                st.download_button(
-                    label="Download PDF",
-                    data=f,
-                    file_name=os.path.basename(pdf_path),
-                    mime="application/pdf"
-                )
-        except Exception as e:
-            st.error(f"Error generating PDF: {e}")
-    else:
-        st.warning("Please enter an ESN.")
+if esn:
+    st.success(f"ESN entered: {esn}")  # Messaggio di conferma inserimento
 
-if st.button("Generate Excel Report"):
-    if esn:
-        try:
-            with st.spinner("Generating Excel report..."):
-                excel_path = genera_excel(esn, base_dir)
-            with open(excel_path, "rb") as f:
-                st.download_button(
-                    label="Download Excel",
-                    data=f,
-                    file_name=os.path.basename(excel_path),
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-        except Exception as e:
-            st.error(f"Error generating Excel: {e}")
-    else:
-        st.warning("Please enter an ESN.")
+    # Bottoni per PDF o Excel
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Generate PDF"):
+            try:
+                pdf_path = genera_report(esn, BASE_DIR)
+                st.success(f"PDF generated: {pdf_path}")
+                st.download_button("Download PDF", pdf_path)
+            except Exception as e:
+                st.error(f"Error generating PDF: {e}")
+
+    with col2:
+        if st.button("Generate Excel"):
+            try:
+                excel_path = genera_excel(esn, BASE_DIR)
+                st.success(f"Excel generated: {excel_path}")
+                st.download_button("Download Excel", excel_path)
+            except Exception as e:
+                st.error(f"Error generating Excel: {e}")
