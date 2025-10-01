@@ -1,61 +1,67 @@
-import streamlit as st
 import os
+import streamlit as st
 from genera_report import genera_report
 from genera_excel import genera_excel
-import time
 
-# Cartella base (dove risiedono app.py, logo e database)
-BASE_DIR = "."
+# Percorso base
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Logo in alto a sinistra
+# Logo e titolo
 logo_path = os.path.join(BASE_DIR, "logo.jpg")
 if os.path.exists(logo_path):
-    st.image(logo_path, width=150)
-st.markdown("## Engine Report")
-st.write("---")
+    st.image(logo_path, width=120)
+st.title("Engine Report")
 
 # Input ESN
-esn = st.text_input("Enter Engine Serial Number (ESN):")
+esn = st.text_input("Inserisci ESN:")
+
+# Barra di avanzamento
+progress_bar = st.progress(0)
+status_text = st.empty()
 
 if esn:
-    st.write(f"Generating report for ESN: **{esn}**")
-    
-    # Barra di avanzamento simulata
-    progress_text = "Progressing..."
-    my_bar = st.progress(0, text=progress_text)
-    for percent_complete in range(0, 101, 10):
-        my_bar.progress(percent_complete, text=progress_text)
-        time.sleep(0.05)  # Simula tempo di elaborazione
-    my_bar.empty()
-    
     col1, col2 = st.columns(2)
-    
-    # Bottone PDF
+
     with col1:
-        if st.button("Download PDF"):
+        if st.button("Genera PDF"):
             try:
-                pdf_file = genera_report(esn, base_dir=BASE_DIR)
-                with open(pdf_file, "rb") as f:
+                progress_bar.progress(20)
+                status_text.text("Caricamento dati...")
+
+                output_path = os.path.join(BASE_DIR, f"Report_{esn}.pdf")
+                genera_report(esn, output_path, BASE_DIR)
+
+                progress_bar.progress(100)
+                status_text.text("Completato!")
+
+                with open(output_path, "rb") as file:
                     st.download_button(
-                        label="Download PDF",
-                        data=f,
-                        file_name=os.path.basename(pdf_file),
+                        "Scarica PDF",
+                        file,
+                        file_name=f"Report_{esn}.pdf",
                         mime="application/pdf"
                     )
             except Exception as e:
-                st.error(f"Error generating PDF: {e}")
-    
-    # Bottone Excel
+                st.error(f"Errore generazione PDF: {e}")
+
     with col2:
-        if st.button("Download Excel"):
+        if st.button("Genera Excel"):
             try:
-                excel_file = genera_excel(esn, base_dir=BASE_DIR)
-                with open(excel_file, "rb") as f:
+                progress_bar.progress(20)
+                status_text.text("Caricamento dati...")
+
+                output_path = os.path.join(BASE_DIR, f"Report_{esn}.xlsx")
+                genera_excel(esn, output_path, BASE_DIR)
+
+                progress_bar.progress(100)
+                status_text.text("Completato!")
+
+                with open(output_path, "rb") as file:
                     st.download_button(
-                        label="Download Excel",
-                        data=f,
-                        file_name=os.path.basename(excel_file),
+                        "Scarica Excel",
+                        file,
+                        file_name=f"Report_{esn}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
             except Exception as e:
-                st.error(f"Error generating Excel: {e}")
+                st.error(f"Errore generazione Excel: {e}")
