@@ -1,9 +1,9 @@
-import pandas as pd
 import os
-from reportlab.lib import colors
+import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 styles = getSampleStyleSheet()
 normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, leading=9)
@@ -11,9 +11,11 @@ normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, lea
 def crea_tabella(df, titolo):
     elements = []
     titolo_style = ParagraphStyle('titolo', parent=styles['Heading2'], spaceAfter=10, alignment=0)
+
+    elements.append(Paragraph(titolo, titolo_style))
+    elements.append(Spacer(1, 6))
+
     if df.empty:
-        elements.append(Paragraph(titolo, titolo_style))
-        elements.append(Spacer(1, 6))
         elements.append(Paragraph("No values found", styles['Normal']))
         elements.append(Spacer(1, 12))
         return elements
@@ -23,24 +25,22 @@ def crea_tabella(df, titolo):
     for _, row in df.iterrows():
         data.append([Paragraph(str(cell), normal_style) for cell in row])
 
+    # Adatta larghezza colonne al numero di colonne
     num_cols = len(df.columns)
     col_widths = [500 / num_cols] * num_cols
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 7),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('TOPPADDING', (0, 1), (-1, -1), 3),
-        ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,-1), 7),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,0), 6),
+        ('TOPPADDING', (0,1), (-1,-1), 3),
+        ('GRID', (0,0), (-1,-1), 0.25, colors.black),
     ]))
-
-    elements.append(Paragraph(titolo, titolo_style))
-    elements.append(Spacer(1, 6))
     elements.append(table)
     elements.append(Spacer(1, 12))
     return elements
@@ -54,11 +54,10 @@ def genera_report(esn, base_dir):
     logo_path = os.path.join(base_dir, "logo.jpg")
     if os.path.exists(logo_path):
         logo = Image(logo_path, width=100, height=40)
-        header = Table([[logo, ""]], colWidths=[100, 400])
-        elements.append(header)
+        elements.append(logo)
+        elements.append(Spacer(1, 12))
 
-    elements.append(Spacer(1, 12))
-    elements.append(Paragraph(f"Report ESN {esn}", styles['Title']))
+    elements.append(Paragraph(f"Engine Report: {esn}", styles['Title']))
     elements.append(Spacer(1, 20))
 
     # --- Dossier ICSS ---
@@ -93,36 +92,40 @@ def genera_report(esn, base_dir):
     if not df_claim_filtrato.empty:
         df_claim_filtrato['Claim Payment Date'] = pd.to_datetime(df_claim_filtrato['Claim Payment Date'], errors='coerce')
         df_claim_filtrato = df_claim_filtrato.sort_values("Claim Payment Date", ascending=False)
+        df_claim_risultato = df_claim_filtrato[["FPT Engine Family","Claim Number","Payed Dealer Name","Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"]]
         total_amount = df_claim_filtrato["Approved Amount"].sum()
         currency = df_claim_filtrato["Local Currency Code"].iloc[0] if "Local Currency Code" in df_claim_filtrato.columns else ""
         titolo_claim = f"Claim - Total {total_amount:.2f} {currency}"
-        df_claim_risultato = df_claim_filtrato[["FPT Engine Family","Claim Number","Payed Dealer Name","Failure Comment","Claim Payment Date","Approved Amount","Local Currency Code"]]
     else:
         titolo_claim = "Claim - Total 0"
         df_claim_risultato = pd.DataFrame()
     elements += crea_tabella(df_claim_risultato, titolo_claim)
 
     doc.build(elements)
-    print(f"✅ Report generated: {pdf_file}")
+    return pdf_file
 
 def genera_excel(esn, base_dir):
-    output_file = os.path.join(base_dir, f"Report_{esn}.xlsx")
-    with pd.ExcelWriter(output_file) as writer:
-        # ICSS
-        df_icss = pd.read_excel(os.path.join(base_dir, "Data Base Service.xlsx"))
-        df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)]
+    excel_file = os.path.join(base_dir, f"Report_{esn}.xlsx")
+    writer = pd.ExcelWriter(excel_file, engine="xlsxwriter")
+
+    # --- Dossier ICSS ---
+    df_icss = pd.read_excel(os.path.join(base_dir, "Data Base Service.xlsx"))
+    df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)]
+    if not df_icss_filtrato.empty:
         df_icss_filtrato.to_excel(writer, sheet_name="Dossier ICSS", index=False)
-        # Riga vuota
-        pd.DataFrame().to_excel(writer, sheet_name="Dossier ICSS", index=False, startrow=len(df_icss_filtrato)+1)
 
-        # THD
-        df_thd = pd.read_excel(os.path.join(base_dir, "THD FM.xlsx"))
-        df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)]
-        df_thd_filtrato.to_excel(writer, sheet_name="THD", index=False, startrow=0)
+    # --- THD ---
+    df_thd = pd.read_excel(os.path.join(base_dir, "THD FM.xlsx"))
+    df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)]
+    if not df_thd_filtrato.empty:
+        df_thd_filtrato.to_excel(writer, sheet_name="THD", index=False, startrow= len(df_icss_filtrato)+2 if not df_icss_filtrato.empty else 0)
 
-        # Claim
-        df_claim = pd.read_excel(os.path.join(base_dir, "Data Base Warranty.xlsx"))
-        df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)]
-        df_claim_filtrato.to_excel(writer, sheet_name="Claim", index=False, startrow=0)
+    # --- Claim ---
+    df_claim = pd.read_excel(os.path.join(base_dir, "Data Base Warranty.xlsx"))
+    df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)]
+    if not df_claim_filtrato.empty:
+        startrow = (len(df_icss_filtrato) + len(df_thd_filtrato) + 4) if not df_icss_filtrato.empty or not df_thd_filtrato.empty else 0
+        df_claim_filtrato.to_excel(writer, sheet_name="Claim", index=False, startrow=startrow)
 
-    print(f"✅ Excel generated: {output_file}")
+    writer.save()
+    return excel_file
