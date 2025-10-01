@@ -3,7 +3,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-import os
+from io import BytesIO
 
 styles = getSampleStyleSheet()
 normal_style = ParagraphStyle('normal', parent=styles['Normal'], fontSize=7, leading=9)
@@ -12,9 +12,10 @@ def crea_tabella(df, titolo):
     elements = []
     titolo_style = ParagraphStyle('titolo', parent=styles['Heading2'], spaceAfter=10, alignment=0)
 
+    elements.append(Paragraph(titolo, titolo_style))
+    elements.append(Spacer(1, 6))
+
     if df.empty:
-        elements.append(Paragraph(titolo, titolo_style))
-        elements.append(Spacer(1, 6))
         elements.append(Paragraph("No values found", styles['Normal']))
         elements.append(Spacer(1, 12))
         return elements
@@ -25,7 +26,7 @@ def crea_tabella(df, titolo):
         data.append([Paragraph(str(cell), normal_style) for cell in row])
 
     num_cols = len(df.columns)
-    col_widths = [500 / num_cols] * num_cols
+    col_widths = [700 / num_cols] * num_cols  # adatta a landscape A4
 
     table = Table(data, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
@@ -40,33 +41,28 @@ def crea_tabella(df, titolo):
         ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
     ]))
 
-    elements.append(Paragraph(titolo, titolo_style))
-    elements.append(Spacer(1, 6))
     elements.append(table)
     elements.append(Spacer(1, 12))
     return elements
 
 def genera_report(esn):
-    current_dir = os.path.dirname(__file__)
-    pdf_file = os.path.join(current_dir, f"Report_{esn}.pdf")
-    doc = SimpleDocTemplate(pdf_file, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
+    pdf_buffer = BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=landscape(A4), leftMargin=20, rightMargin=20)
     elements = []
 
-    # Logo a sinistra
+    # Logo
     try:
-        logo_path = os.path.join(current_dir, "logo.jpg")
-        logo = Image(logo_path, width=100, height=40)
+        logo = Image("logo.jpg", width=100, height=40)
         header = Table([[logo, ""]], colWidths=[100, 600])
         elements.append(header)
     except:
-        elements.append(Paragraph("Report", styles['Title']))
-
-    elements.append(Spacer(1, 12))
+        elements.append(Paragraph(f"Report ESN {esn}", styles['Title']))
+    elements.append(Spacer(1, 20))
     elements.append(Paragraph(f"Report ESN {esn}", styles['Title']))
     elements.append(Spacer(1, 20))
 
     # --- Dossier ICSS ---
-    df_icss = pd.read_excel(os.path.join(current_dir, "Data Base Service.xlsx"))
+    df_icss = pd.read_excel("Data Base Service.xlsx")
     df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)].copy()
     if not df_icss_filtrato.empty:
         df_icss_filtrato['WAT_ORIGINAL'] = pd.to_datetime(df_icss_filtrato['WAT_ORIGINAL'], errors='coerce')
@@ -79,7 +75,7 @@ def genera_report(esn):
     elements += crea_tabella(df_icss_risultato, titolo_icss)
 
     # --- THD ---
-    df_thd = pd.read_excel(os.path.join(current_dir, "THD FM.xlsx"))
+    df_thd = pd.read_excel("THD FM.xlsx")
     df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)].copy()
     if not df_thd_filtrato.empty:
         df_thd_filtrato['Submitted On'] = pd.to_datetime(df_thd_filtrato['Submitted On'], errors='coerce')
@@ -92,7 +88,7 @@ def genera_report(esn):
     elements += crea_tabella(df_thd_risultato, titolo_thd)
 
     # --- Claim ---
-    df_claim = pd.read_excel(os.path.join(current_dir, "Data Base Warranty.xlsx"))
+    df_claim = pd.read_excel("Data Base Warranty.xlsx")
     df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)].copy()
     if not df_claim_filtrato.empty:
         df_claim_filtrato['Claim Payment Date'] = pd.to_datetime(df_claim_filtrato['Claim Payment Date'], errors='coerce')
@@ -107,23 +103,28 @@ def genera_report(esn):
     elements += crea_tabella(df_claim_risultato, titolo_claim)
 
     doc.build(elements)
-    return pdf_file
-
+    pdf_buffer.seek(0)
+    return pdf_buffer
 
 def genera_excel(esn):
-    current_dir = os.path.dirname(__file__)
-    excel_file = os.path.join(current_dir, f"Report_{esn}.xlsx")
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
 
-    df_icss = pd.read_excel(os.path.join(current_dir, "Data Base Service.xlsx"))
-    df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)]
-    df_thd = pd.read_excel(os.path.join(current_dir, "THD FM.xlsx"))
-    df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)]
-    df_claim = pd.read_excel(os.path.join(current_dir, "Data Base Warranty.xlsx"))
-    df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)]
+    # ICSS
+    df_icss = pd.read_excel("Data Base Service.xlsx")
+    df_icss_filtrato = df_icss[df_icss["Engine Serial Number"].astype(str) == str(esn)].copy()
+    df_icss_filtrato.to_excel(writer, sheet_name="Dossier ICSS", index=False)
 
-    with pd.ExcelWriter(excel_file) as writer:
-        df_icss_filtrato.to_excel(writer, sheet_name="Dossier ICSS", index=False)
-        df_thd_filtrato.to_excel(writer, sheet_name="THD", index=False, startrow=len(df_icss_filtrato)+2)
-        df_claim_filtrato.to_excel(writer, sheet_name="Claim", index=False, startrow=len(df_icss_filtrato)+len(df_thd_filtrato)+4)
+    # THD
+    df_thd = pd.read_excel("THD FM.xlsx")
+    df_thd_filtrato = df_thd[df_thd["Engine Serial Number"].astype(str) == str(esn)].copy()
+    df_thd_filtrato.to_excel(writer, sheet_name="THD", index=False)
 
-    return excel_file
+    # Claim
+    df_claim = pd.read_excel("Data Base Warranty.xlsx")
+    df_claim_filtrato = df_claim[df_claim["FPT Serial Number Customer"].astype(str) == str(esn)].copy()
+    df_claim_filtrato.to_excel(writer, sheet_name="Claim", index=False)
+
+    writer.save()
+    output.seek(0)
+    return output
