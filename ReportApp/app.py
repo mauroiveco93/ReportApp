@@ -1,21 +1,22 @@
 import streamlit as st
-from generate import genera_report
+from genera_report import genera_report
+
+st.set_page_config(page_title="Engine Report", layout="wide")
 
 st.title("Engine Report Generator")
 
-# Inserisci ESN
-esn = st.text_input("Enter Engine Serial Number (ESN)")
+# Inserimento ESN
+esn = st.text_input("Insert Engine Serial Number (ESN):")
 
-# Bottone genera report
-if st.button("Generate PDF") and esn:
+if st.button("Generate Report") and esn:
     try:
-        pdf_buffer = genera_report(esn)
-        st.success("Report generated successfully!")
-        st.download_button(
-            "Download PDF",
-            data=pdf_buffer,
-            file_name=f"Report_{esn}.pdf",
-            mime="application/pdf"
-        )
+        pdf_file = genera_report(esn)
+        with open(pdf_file, "rb") as f:
+            st.download_button(
+                label="Download Report PDF",
+                data=f,
+                file_name=pdf_file,
+                mime="application/pdf"
+            )
     except Exception as e:
-        st.error(f"Errore nella generazione del report: {e}")
+        st.error(f"❌ Error generating report: {e}")
