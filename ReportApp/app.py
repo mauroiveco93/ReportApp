@@ -1,33 +1,66 @@
 import streamlit as st
-import os
 from genera_report import genera_report
 from genera_excel import genera_excel
+import time
+import os
 
-st.set_page_config(page_title="Engine Report", layout="centered")
+st.set_page_config(page_title="Engine Report", layout="wide")
 
-# Logo
-if os.path.exists("logo.jpg"):
-    st.image("logo.jpg", width=150)
+# --- Logo and title ---
+col1, col2 = st.columns([1, 6])
+with col1:
+    try:
+        st.image("logo.jpg", width=120)
+    except:
+        st.write("Logo not found")
+with col2:
+    st.title("Engine Report")
 
-st.title("Engine Report")
+st.write("---")
 
-esn = st.text_input("Inserisci Engine Serial Number (ESN)")
+# --- User input ---
+esn = st.text_input("Enter Engine Serial Number (ESN):")
 
 if esn:
-    if st.button("📄 Scarica PDF"):
-        with st.spinner("Generazione PDF in corso..."):
-            try:
-                pdf_path = genera_report(esn, base_dir=".")
-                with open(pdf_path, "rb") as f:
-                    st.download_button("Download PDF", f, file_name=os.path.basename(pdf_path))
-            except Exception as e:
-                st.error(f"Errore generazione PDF: {e}")
+    # --- Progress bar ---
+    progress_text = st.empty()
+    progress_bar = st.progress(0)
 
-    if st.button("📊 Scarica Excel"):
-        with st.spinner("Generazione Excel in corso..."):
+    def update_progress():
+        for i in range(1, 101):
+            progress_text.text(f"Processing... {i}%")
+            progress_bar.progress(i)
+            time.sleep(0.01)  # simulate realistic processing
+
+    update_progress()
+
+    st.write("Choose output format:")
+    col_pdf, col_excel = st.columns(2)
+
+    with col_pdf:
+        if st.button("Generate PDF"):
             try:
-                excel_path = genera_excel(esn, base_dir=".")
-                with open(excel_path, "rb") as f:
-                    st.download_button("Download Excel", f, file_name=os.path.basename(excel_path))
+                pdf_file = genera_report(esn)
+                with open(pdf_file, "rb") as f:
+                    st.download_button(
+                        label="Download PDF",
+                        data=f,
+                        file_name=pdf_file,
+                        mime="application/pdf"
+                    )
             except Exception as e:
-                st.error(f"Errore generazione Excel: {e}")
+                st.error(f"Error generating PDF: {e}")
+
+    with col_excel:
+        if st.button("Generate Excel"):
+            try:
+                excel_file = genera_excel(esn)
+                with open(excel_file, "rb") as f:
+                    st.download_button(
+                        label="Download Excel",
+                        data=f,
+                        file_name=excel_file,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            except Exception as e:
+                st.error(f"Error generating Excel: {e}")
