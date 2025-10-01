@@ -1,39 +1,35 @@
 import streamlit as st
-from genera_report import genera_report, genera_excel
-from io import BytesIO
-import time
+from generate import genera_report, genera_excel
+import os
 
-st.set_page_config(page_title="Report Engine", layout="wide")
+st.set_page_config(page_title="Report App", layout="wide")
 
-# Logo in alto
-st.image("logo.jpg", width=150)
+current_dir = os.path.dirname(__file__)
+logo_path = os.path.join(current_dir, "logo.jpg")
 
-st.title("Report Engine")
+# Logo
+try:
+    st.image(logo_path, width=150)
+except:
+    st.title("Report App")
+
+st.title("Engine Serial Number Report")
 
 # Inserimento ESN
-esn = st.text_input("Insert Engine Serial Number (ESN)")
+esn = st.text_input("Enter Engine Serial Number (ESN):")
 
 if esn:
-    st.write(f"Generating report for ESN: {esn} ...")
-
-    # Barra di progresso fittizia
     progress_bar = st.progress(0)
-    for i in range(101):
-        time.sleep(0.01)
-        progress_bar.progress(i)
+    st.write("Generating report...")
 
-    # Genera PDF
-    try:
-        pdf_buffer = genera_report(esn)
-        st.success("✅ PDF generated successfully")
-        st.download_button(label="Download PDF", data=pdf_buffer, file_name=f"Report_{esn}.pdf", mime="application/pdf")
-    except Exception as e:
-        st.error(f"Error generating PDF: {e}")
+    # PDF
+    pdf_file = genera_report(esn)
+    progress_bar.progress(50)
 
-    # Genera Excel
-    try:
-        excel_buffer = genera_excel(esn)
-        st.success("✅ Excel generated successfully")
-        st.download_button(label="Download Excel", data=excel_buffer, file_name=f"Report_{esn}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    except Exception as e:
-        st.error(f"Error generating Excel: {e}")
+    # Excel
+    excel_file = genera_excel(esn)
+    progress_bar.progress(100)
+
+    # Download buttons
+    st.download_button("Download PDF", pdf_file, file_name=f"Report_{esn}.pdf", mime="application/pdf")
+    st.download_button("Download Excel", excel_file, file_name=f"Report_{esn}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
