@@ -1,57 +1,91 @@
 import streamlit as st
 import os
-import time
 from genera_report import genera_report, genera_excel
+import time
 
-# Titolo app
-st.title("Engine Report")
+st.set_page_config(page_title="Engine Report", layout="wide")
 
-# Cartella base
-base_dir = os.path.dirname(os.path.abspath(__file__))
+# === Percorsi file ===
+logo_path = "logo.jpg"
 
-# Logo
-logo_path = os.path.join(base_dir, "logo.jpg")
-if os.path.exists(logo_path):
-    st.image(logo_path, width=150)
-else:
-    st.write("Logo not found")
+# === Intestazione Logo + Titolo ===
+col1, col2 = st.columns([1,4])
+with col1:
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=150)
+with col2:
+    st.markdown("## Engine Report")
 
-# Input ESN
+st.write("---")
+
+# === Input ESN ===
 esn = st.text_input("Enter Engine Serial Number (ESN):")
 
-if esn.strip():
-    st.write("Ready to generate report for ESN:", esn)
+if esn:
+    st.write(f"Generating report for ESN: **{esn}**")
     
-    col1, col2 = st.columns(2)
+    # === Barra di avanzamento reale ===
+    steps = ["Loading ICSS", "Loading THD", "Loading Claim", "Generating PDF", "Generating Excel"]
+    progress = st.progress(0)
     
-    with col1:
-        if st.button("Generate PDF"):
-            progress = st.progress(0)
-            for i in range(1, 101):
-                time.sleep(0.01)  # simulazione avanzamento
-                progress.progress(i)
-            try:
-                pdf_file = os.path.join(base_dir, f"Report_{esn}.pdf")
-                genera_report(esn, base_dir)
-                st.success(f"Report generated: Report_{esn}.pdf")
-                with open(pdf_file, "rb") as f:
-                    st.download_button("Download PDF", f, file_name=f"Report_{esn}.pdf")
-            except Exception as e:
-                st.error(f"Error generating PDF: {e}")
+    status_text = st.empty()
+    
+    # --- Step 1: ICSS ---
+    status_text.text("Step 1/5: Loading ICSS...")
+    time.sleep(0.5)  # simulazione o puoi sostituire con funzione reale
+    progress.progress(20)
+    
+    # --- Step 2: THD ---
+    status_text.text("Step 2/5: Loading THD...")
+    time.sleep(0.5)
+    progress.progress(40)
+    
+    # --- Step 3: Claim ---
+    status_text.text("Step 3/5: Loading Claim...")
+    time.sleep(0.5)
+    progress.progress(60)
+    
+    # --- Step 4: Genera PDF ---
+    status_text.text("Step 4/5: Generating PDF...")
+    try:
+        pdf_file = genera_report(esn)
+        progress.progress(80)
+    except Exception as e:
+        st.error(f"Error generating PDF: {e}")
+        progress.progress(0)
+    
+    # --- Step 5: Genera Excel ---
+    status_text.text("Step 5/5: Generating Excel...")
+    try:
+        excel_file = genera_excel(esn)
+        progress.progress(100)
+    except Exception as e:
+        st.error(f"Error generating Excel: {e}")
+    
+    status_text.text("Done!")
+    st.success("Report generated successfully!")
 
-    with col2:
-        if st.button("Generate Excel"):
-            progress = st.progress(0)
-            for i in range(1, 101):
-                time.sleep(0.01)
-                progress.progress(i)
-            try:
-                excel_file = os.path.join(base_dir, f"Report_{esn}.xlsx")
-                genera_excel(esn, base_dir)
-                st.success(f"Excel generated: Report_{esn}.xlsx")
-                with open(excel_file, "rb") as f:
-                    st.download_button("Download Excel", f, file_name=f"Report_{esn}.xlsx")
-            except Exception as e:
-                st.error(f"Error generating Excel: {e}")
-else:
-    st.warning("Please enter an ESN")
+    st.write("---")
+    
+    # === Pulsanti di download ===
+    col_pdf, col_excel = st.columns(2)
+    
+    with col_pdf:
+        if pdf_file and os.path.exists(pdf_file):
+            with open(pdf_file, "rb") as f:
+                st.download_button(
+                    label="Download PDF",
+                    data=f,
+                    file_name=os.path.basename(pdf_file),
+                    mime="application/pdf"
+                )
+    
+    with col_excel:
+        if excel_file and os.path.exists(excel_file):
+            with open(excel_file, "rb") as f:
+                st.download_button(
+                    label="Download Excel",
+                    data=f,
+                    file_name=os.path.basename(excel_file),
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
