@@ -4,7 +4,7 @@ import time
 from genera_report import genera_report, genera_excel
 
 # Titolo app
-st.title("Motore Report")
+st.title("Engine Report")
 
 # Cartella base
 base_dir = os.path.dirname(os.path.abspath(__file__))
