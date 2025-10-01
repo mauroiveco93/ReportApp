@@ -9,7 +9,7 @@ def genera_report(esn):
     # ====== Percorsi relativi ======
     BASE_DIR = os.path.dirname(__file__)
     output_dir = os.path.join(BASE_DIR, "output")
-    os.makedirs(output_dir, exist_ok=True)  # crea cartella se non esiste
+    os.makedirs(output_dir, exist_ok=True)
 
     file_icss = os.path.join(BASE_DIR, "Data Base Service.xlsx")
     file_thd = os.path.join(BASE_DIR, "THD FM.xlsx")
@@ -92,15 +92,17 @@ def genera_report(esn):
         if df.empty:
             elems.append(Paragraph("No values found", styles['Normal']))
         else:
-            # Converti tutte le celle in Paragraph per testo multilinea
+            # Converti tutte le celle in Paragraph per multilinea
             data = [ [Paragraph(str(c), cell_style) for c in df.columns] ] + \
                    [ [Paragraph(str(c), cell_style) for c in row] for row in df.values.tolist()]
 
-            # Imposta larghezza colonne proporzionale
+            # Calcolo larghezze proporzionate
             total_cols = len(df.columns)
             page_width = 1030  # A4 landscape ~ 11.7 inch * 88 punti/inch
             col_width = page_width / total_cols
-            col_widths = [col_width]*total_cols
+            min_width = 70
+            max_width = 180
+            col_widths = [min(max(col_width, min_width), max_width) for _ in range(total_cols)]
 
             t = Table(data, colWidths=col_widths, repeatRows=1, hAlign='LEFT')
             t.setStyle(TableStyle([
