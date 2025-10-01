@@ -1,5 +1,5 @@
 import streamlit as st
-from generate import genera_report, genera_excel
+from genera_report import genera_report, genera_excel
 from io import BytesIO
 import time
 
