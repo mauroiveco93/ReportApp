@@ -51,16 +51,16 @@ def genera_report(esn, base_dir):
     doc = SimpleDocTemplate(pdf_file, pagesize=A4, leftMargin=20, rightMargin=20)
     elements = []
 
-    # Logo a sinistra
+    # Logo a sinistra + titolo centrale
     try:
         logo_path = os.path.join(base_dir, "logo.jpg")
         logo = Image(logo_path, width=100, height=40)
-        elements.append(logo)
+        elements.append(Table([[logo, Paragraph(f"Report for ESN {esn}", styles['Heading1'])]],
+                              colWidths=[110, 400],
+                              style=[('VALIGN', (0,0), (-1,-1), 'MIDDLE')]))
     except Exception:
-        pass
+        elements.append(Paragraph(f"Report for ESN {esn}", styles['Heading1']))
 
-    elements.append(Spacer(1, 20))
-    elements.append(Paragraph(f"Report for ESN {esn}", styles['Heading1']))
     elements.append(Spacer(1, 20))
 
     # --- ICSS ---
