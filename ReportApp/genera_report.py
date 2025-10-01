@@ -2,9 +2,7 @@ import os
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-)
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 styles = getSampleStyleSheet()
@@ -53,21 +51,16 @@ def genera_report(esn, base_dir):
     doc = SimpleDocTemplate(pdf_file, pagesize=A4, leftMargin=20, rightMargin=20)
     elements = []
 
-    # --- Logo a sinistra ---
+    # Logo a sinistra
     try:
         logo_path = os.path.join(base_dir, "logo.jpg")
-        if os.path.exists(logo_path):
-            logo = Image(logo_path, width=100, height=40)
-            header = Table([[logo, ""]], colWidths=[100, 400])
-            elements.append(header)
+        logo = Image(logo_path, width=100, height=40)
+        elements.append(logo)
     except Exception:
-        pass  # se il logo manca, si continua senza
+        pass
 
     elements.append(Spacer(1, 20))
-
-    # --- Titolo centrale ---
-    title_style = ParagraphStyle('report_title', parent=styles['Heading1'], alignment=1)  # centrato
-    elements.append(Paragraph(f"Report for ESN {esn}", title_style))
+    elements.append(Paragraph(f"Report for ESN {esn}", styles['Heading1']))
     elements.append(Spacer(1, 20))
 
     # --- ICSS ---
@@ -79,7 +72,8 @@ def genera_report(esn, base_dir):
         df_icss_filtrato = df_icss_filtrato.sort_values("WAT_ORIGINAL", ascending=False)
         title_icss = f"ICSS Dossiers - {len(df_icss_filtrato)}"
         df_icss_result = df_icss_filtrato[
-            ["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number", "Pre-diagnosis", "Repair Description"]
+            ["DOSSIER ID", "WAT_ORIGINAL", "DEALER", "Engine Serial Number",
+             "Application FPT (Engine FPT)", "Pre-diagnosis", "Repair Description"]
         ]
     else:
         title_icss = "ICSS Dossiers - 0"
